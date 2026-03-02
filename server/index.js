@@ -140,7 +140,7 @@ app.get('/api/related', async (req, res) => {
   }
 });
 
-// Lyrics route - using lyrics API
+// Lyrics route - multi-source with fallback
 app.get('/api/lyrics', async (req, res) => {
   try {
     const { title, artist } = req.query;
@@ -156,20 +156,49 @@ app.get('/api/lyrics', async (req, res) => {
       .replace(/\(.*?audio.*?\)/gi, '')
       .replace(/\[.*?audio.*?\]/gi, '')
       .replace(/\(.*?hd.*?\)/gi, '')
-      .replace(/ft\.?.*/gi, '')
-      .replace(/feat\.?.*/gi, '')
+      .replace(/ft\b.*/gi, '')
+      .replace(/feat\b.*/gi, '')
+      .replace(/&amp;/g, '&')
+      .replace(/&#39;/g, "'")
       .trim();
 
     const cleanArtist = (artist || '')
       .replace(/VEVO$/gi, '')
       .replace(/Official$/gi, '')
+      .replace(/\s*-\s*Topic$/gi, '')
       .trim();
 
-    // Try lyrics.ovh API
+    // Try lrclib.net API (no auth required, good lyrics database)
+    try {
+      const lrclibRes = await axios.get('https://lrclib.net/api/search', {
+        params: { q: `${cleanTitle} ${cleanArtist}`.trim() },
+        timeout: 8000,
+        headers: { 'User-Agent': 'Audiora/1.0 (music streaming app)' }
+      });
+
+      if (lrclibRes.data && lrclibRes.data.length > 0) {
+        const best = lrclibRes.data[0];
+        // Try synced lyrics first, fallback to plain lyrics
+        const lyricsText = best.plainLyrics || best.syncedLyrics?.replace(/\[\d+:\d+\.\d+\]\s*/g, '');
+        if (lyricsText) {
+          const lines = lyricsText
+            .split('\n')
+            .map(l => l.trim())
+            .filter(l => l.length > 0 && !l.startsWith('['));
+          if (lines.length > 0) {
+            return res.json({ lyrics: lines, found: true, source: 'lrclib' });
+          }
+        }
+      }
+    } catch (e) {
+      // lrclib failed, continue
+    }
+
+    // Try lyrics.ovh API (fast timeout)
     try {
       const response = await axios.get(
         `https://api.lyrics.ovh/v1/${encodeURIComponent(cleanArtist || 'unknown')}/${encodeURIComponent(cleanTitle)}`,
-        { timeout: 5000 }
+        { timeout: 4000 }
       );
 
       if (response.data && response.data.lyrics) {
@@ -177,38 +206,15 @@ app.get('/api/lyrics', async (req, res) => {
           .split('\n')
           .map(l => l.trim())
           .filter(l => l.length > 0);
-        return res.json({ lyrics: lines, found: true });
-      }
-    } catch (e) {
-      // Lyrics not found from primary API
-    }
-
-    // Try musixmatch-style search via lyrics.ovh suggest
-    try {
-      const suggestRes = await axios.get(
-        `https://api.lyrics.ovh/suggest/${encodeURIComponent(cleanTitle)}`,
-        { timeout: 5000 }
-      );
-
-      if (suggestRes.data && suggestRes.data.data && suggestRes.data.data.length > 0) {
-        const first = suggestRes.data.data[0];
-        const lyricsRes = await axios.get(
-          `https://api.lyrics.ovh/v1/${encodeURIComponent(first.artist.name)}/${encodeURIComponent(first.title)}`,
-          { timeout: 5000 }
-        );
-
-        if (lyricsRes.data && lyricsRes.data.lyrics) {
-          const lines = lyricsRes.data.lyrics
-            .split('\n')
-            .map(l => l.trim())
-            .filter(l => l.length > 0);
-          return res.json({ lyrics: lines, found: true });
+        if (lines.length > 0) {
+          return res.json({ lyrics: lines, found: true, source: 'ovh' });
         }
       }
     } catch (e) {
-      // Not found
+      // lyrics.ovh failed or timed out
     }
 
+    // No lyrics found
     res.json({ lyrics: [], found: false, message: 'LYRICS NOT AVAILABLE' });
   } catch (error) {
     console.error('Lyrics error:', error.message);
