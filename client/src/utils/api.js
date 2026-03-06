@@ -2,7 +2,7 @@ import axios from 'axios';
 
 // When accessed via public URL, we need to proxy through the Vite dev server
 // The vite.config.js has a proxy from /api -> http://localhost:5000
-const BASE_URL = '';  // Use relative URL so Vite proxy handles it
+const BASE_URL = 'https://audiora-7qru.onrender.com';  // Use relative URL so Vite proxy handles it
 
 const api = axios.create({
   baseURL: BASE_URL,
