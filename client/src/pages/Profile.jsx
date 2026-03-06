@@ -47,9 +47,9 @@ const Profile = () => {
   };
 
   const userInfo = JSON.parse(localStorage.getItem('audiora_user') || JSON.stringify({
-    name: 'Alex Rivera',
-    email: 'alex.rivera@audiora.com',
-    memberSince: '2021',
+    name: 'C H I K U',
+    email: '2173chiku@gmail.com',
+    memberSince: '2026',
     plan: 'PREMIUM',
     playlists: 24,
     following: 142,

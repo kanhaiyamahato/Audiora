@@ -29,13 +29,13 @@ const MADE_FOR_YOU = [
     image: 'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=300&q=80',
     searchQuery: 'lofi hip hop chill',
   },
-  {
-    id: 'mfy4',
-    title: 'Hip Hop Hits',
-    subtitle: "Today's Top",
-    image: 'https://images.unsplash.com/photo-1520872122930-5a36fe16c2a8?w=300&q=80',
-    searchQuery: 'hip hop hits 2024',
-  },
+  // {
+  //   id: 'mfy4',
+  //   title: 'Hip Hop Hits',
+  //   subtitle: "Today's Top",
+  //   image: 'https://images.unsplash.com/photo-1520872122930-5a36fe16c2a8?w=300&q=80',
+  //   searchQuery: 'hip hop hits 2024',
+  // },
 ];
 
 // Song Card Component
